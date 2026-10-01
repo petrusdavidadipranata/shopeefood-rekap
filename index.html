@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SF Driver">
 
-    <!-- Web App Manifest (Data URI agar tetap 1 file index.html) -->
+    <!-- Web App Manifest via Data URI -->
     <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIlNob3BlZUZvb2QgRHJpdmVyIEZpbmFuY2lhbCBUcmFja2VyIiwKICAic2hvcnRfbmFtZSI6ICJTRiBEcml2ZXIiLAogICJzdGFydF91cmwiOiAiLi8iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMwZjE3MmEiLAogICJ0aGVtZV9jb2xvciI6ICIjRUU0RDJEIiwKICAib3JpZW50YXRpb24iOiAicG9ydHJhaXQiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJodHRwczovL2Nkbi1pY29ucy1wbmcudGFsZWZsZXguY29tLzUxMi8zMDg2LzMwODYwNjIucG5nIiwKICAgICAgInNpemVzIjogIjE5MngxOTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9wbmciCiAgICB9LAogICAgewogICAgICAic3JjIjogImh0dHBzOi8vY2RuLWljb25zLXBuZy50YWxlZmxleC5jb20vNTEyLzMwODYvMzA4NjA2Mi5wbmciLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIKICAgIH0KICBdCn0=" />
 
     <!-- Tailwind CSS -->
@@ -94,12 +94,11 @@
                     <i class="fa-solid font-bold fa-motorcycle"></i>
                 </div>
                 <div>
-                    <h1 class="font-bold text-base tracking-tight leading-none text-slate-100">ShopeeFood <span class="text-shopee">Driver <br> (Mas David)</span></h1>
+                    <h1 class="font-bold text-base tracking-tight leading-none text-slate-100">ShopeeFood <span class="text-shopee">Driver <br>(Mas David)</span></h1>
                     <p class="text-[10px] text-slate-400 font-medium">Catatan Keuangan & Dompet</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <!-- Tombol Install PWA -->
                 <button id="btnInstallPwa" onclick="installPWA()" class="hidden text-xs bg-shopee hover:bg-shopee-hover text-white px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 font-bold shadow transition animate-bounce">
                     <i class="fa-solid fa-download"></i>
                     <span>Install App</span>
@@ -119,7 +118,6 @@
         <!-- TAB 1: DASHBOARD -->
         <section id="tab-dashboard" class="tab-content space-y-4">
             
-            <!-- Cards Saldo Utama -->
             <div class="glass-card rounded-2xl p-4 relative overflow-hidden border border-slate-700/60 shadow-xl">
                 <div class="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-shopee/10 blur-xl"></div>
                 
@@ -150,7 +148,6 @@
                 </div>
             </div>
 
-            <!-- Quick Action Buttons -->
             <div class="grid grid-cols-2 gap-3">
                 <button onclick="openModal('modalOrder')" class="shopee-gradient hover:opacity-95 text-white p-3.5 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shopee-glow transition active:scale-95">
                     <i class="fa-solid fa-circle-plus text-lg"></i>
@@ -162,7 +159,6 @@
                 </button>
             </div>
 
-            <!-- Ringkasan Hari Ini -->
             <div class="glass-card rounded-2xl p-4 space-y-3">
                 <div class="flex justify-between items-center border-b border-slate-800 pb-2">
                     <h3 class="font-bold text-sm text-slate-200 flex items-center gap-2">
@@ -196,7 +192,6 @@
                 </div>
             </div>
 
-            <!-- Recent Activity Mini List -->
             <div class="glass-card rounded-2xl p-4 space-y-3">
                 <div class="flex justify-between items-center">
                     <h3 class="font-bold text-sm text-slate-200">Transaksi Terakhir</h3>
@@ -497,15 +492,19 @@ ALTER TABLE transactions DISABLE ROW LEVEL SECURITY;
     </div>
 
     <script>
-        // --- PWA SERVICE WORKER REGISTRATION ---
-        if ('serviceWorker' in navigator) {
-            const swCode = `
-                self.addEventListener('install', (e) => self.skipWaiting());
-                self.addEventListener('activate', (e) => self.clients.claim());
-                self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => new Response('Offline'))));
-            `;
-            const blob = new Blob([swCode], { type: 'text/javascript' });
-            navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(err => console.log('SW Fail:', err));
+        // --- PWA SERVICE WORKER ---
+        if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+            try {
+                const swCode = `
+                    self.addEventListener('install', (e) => self.skipWaiting());
+                    self.addEventListener('activate', (e) => self.clients.claim());
+                    self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => new Response('Offline'))));
+                `;
+                const blob = new Blob([swCode], { type: 'text/javascript' });
+                navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(err => console.log('SW Reg Info:', err));
+            } catch(e) {
+                console.log('SW Exception Handled');
+            }
         }
 
         let deferredPrompt = null;
@@ -525,6 +524,8 @@ ALTER TABLE transactions DISABLE ROW LEVEL SECURITY;
                     }
                     deferredPrompt = null;
                 });
+            } else {
+                alert("Gunakan menu opsi Chrome (titik tiga) lalu pilih 'Tambah ke Layar Utama' / 'Install aplikasi'");
             }
         }
 
