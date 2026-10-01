@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ShopeeFood Driver Financial Tracker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        shopee: {
+                            DEFAULT: '#EE4D2D',
+                            hover: '#D73211',
+                            light: '#FF6B4A',
+                            dark: '#A62108',
+                            glow: 'rgba(238, 77, 45, 0.35)'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Supabase JS CDN v2 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-nav {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .shopee-gradient {
+            background: linear-gradient(135deg, #FF6B4A 0%, #EE4D2D 50%, #C02607 100%);
+        }
+        .shopee-glow {
+            box-shadow: 0 8px 25px -5px rgba(238, 77, 45, 0.4);
+        }
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen pb-24 select-none">
+
+    <!-- Top Header Bar -->
+    <header class="sticky top-0 z-30 glass-nav border-b border-slate-800/80 px-4 py-3">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl shopee-gradient flex items-center justify-center text-white font-black text-lg shadow-lg shadow-shopee-glow">
+                    <i class="fa-solid font-bold fa-motorcycle"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base tracking-tight leading-none text-slate-100">ShopeeFood <span class="text-shopee">Driver <br>(Mas David)</span></h1>
+                    <p class="text-[10px] text-slate-400 font-medium">Catatan Keuangan & Dompet</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openModal('modalSaldoAwal')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-sliders text-shopee"></i>
+                    <span>Saldo Awal</span>
+                </button>
+                <div id="dbStatusBadge" class="w-3 h-3 rounded-full bg-amber-500 animate-pulse" title="Mengecek Supabase..."></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- App Container -->
+    <main class="max-w-md mx-auto px-4 pt-4 pb-6 space-y-5">
+
+        <!-- TAB 1: DASHBOARD -->
+        <section id="tab-dashboard" class="tab-content space-y-4">
+            
+            <!-- Cards Saldo Utama -->
+            <div class="glass-card rounded-2xl p-4 relative overflow-hidden border border-slate-700/60 shadow-xl">
+                <div class="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-shopee/10 blur-xl"></div>
+                
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-wallet text-shopee"></i> Total Kekayaan David
+                    </span>
+                    <span id="badgeSync" class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium">Live Supabase</span>
+                </div>
+
+                <div id="totalAssets" class="text-3xl font-extrabold text-white tracking-tight mb-4">
+                    Rp 0
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-700/50">
+                    <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                        <div class="text-[11px] text-slate-400 font-medium flex items-center gap-1 mb-1">
+                            <i class="fa-solid fa-mobile-screen text-amber-400"></i> Saldo App Shopee
+                        </div>
+                        <div id="saldoApp" class="text-base font-bold text-amber-400">Rp 0</div>
+                    </div>
+                    <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                        <div class="text-[11px] text-slate-400 font-medium flex items-center gap-1 mb-1">
+                            <i class="fa-solid fa-money-bill-wave text-emerald-400"></i> Cash Dompet
+                        </div>
+                        <div id="cashDompet" class="text-base font-bold text-emerald-400">Rp 0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Action Buttons -->
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="openModal('modalOrder')" class="shopee-gradient hover:opacity-95 text-white p-3.5 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shopee-glow transition active:scale-95">
+                    <i class="fa-solid fa-circle-plus text-lg"></i>
+                    <span>+ Orderan Baru</span>
+                </button>
+                <button onclick="openModal('modalExpense')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-rose-400 p-3.5 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md transition active:scale-95">
+                    <i class="fa-solid fa-minus-circle text-lg"></i>
+                    <span>+ Pengeluaran</span>
+                </button>
+            </div>
+
+            <!-- Ringkasan Hari Ini -->
+            <div class="glass-card rounded-2xl p-4 space-y-3">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <h3 class="font-bold text-sm text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-calendar-day text-shopee"></i> Ringkasan Hari Ini
+                    </h3>
+                    <span id="todayDate" class="text-[11px] text-slate-400 font-medium"></span>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-slate-900/40 p-2.5 rounded-xl border border-slate-800">
+                        <p class="text-[10px] text-slate-400 mb-0.5">Orderan</p>
+                        <p id="todayOrderCount" class="font-extrabold text-sm text-slate-100">0</p>
+                    </div>
+                    <div class="bg-slate-900/40 p-2.5 rounded-xl border border-slate-800">
+                        <p class="text-[10px] text-emerald-400 mb-0.5">Bersih (Net)</p>
+                        <p id="todayIncome" class="font-extrabold text-sm text-emerald-400">Rp 0</p>
+                    </div>
+                    <div class="bg-slate-900/40 p-2.5 rounded-xl border border-slate-800">
+                        <p class="text-[10px] text-rose-400 mb-0.5">Pengeluaran</p>
+                        <p id="todayExpense" class="font-extrabold text-sm text-rose-400">Rp 0</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center text-xs pt-1 px-1">
+                    <span class="text-slate-400 flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span> COD: <b id="todayCodCount" class="text-slate-200">0</b>
+                    </span>
+                    <span class="text-slate-400 flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-indigo-500"></span> NON-COD: <b id="todayNonCodCount" class="text-slate-200">0</b>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Recent Activity Mini List -->
+            <div class="glass-card rounded-2xl p-4 space-y-3">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-sm text-slate-200">Transaksi Terakhir</h3>
+                    <button onclick="switchTab('tab-transaksi')" class="text-xs text-shopee hover:underline font-semibold">Lihat Semua</button>
+                </div>
+                <div id="recentTransactionList" class="space-y-2">
+                    <div class="text-center py-4 text-slate-500 text-xs">Memuat aktivitas...</div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- TAB 2: TRANSAKSI (CRUD) -->
+        <section id="tab-transaksi" class="tab-content hidden space-y-4">
+            <div class="flex items-center justify-between gap-2">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-500 text-xs"></i>
+                    <input type="text" id="searchInput" oninput="renderTransactions()" placeholder="Cari catatan..." class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-8 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-shopee">
+                </div>
+                <select id="filterType" onchange="renderTransactions()" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-shopee">
+                    <option value="ALL">Semua Jenis</option>
+                    <option value="COD">COD (Tunai)</option>
+                    <option value="NON">NON-COD</option>
+                    <option value="EXPENSE">Pengeluaran</option>
+                </select>
+            </div>
+
+            <div id="fullTransactionList" class="space-y-2.5">
+                <div class="text-center py-6 text-slate-500 text-xs">Memuat riwayat transaksi...</div>
+            </div>
+        </section>
+
+        <!-- TAB 3: REKAP & STATISTIK -->
+        <section id="tab-rekap" class="tab-content hidden space-y-4">
+            <!-- Filter Period Switcher -->
+            <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
+                <button onclick="setRekapPeriod('daily')" id="btnPeriodDaily" class="flex-1 py-1.5 font-semibold rounded-lg text-slate-400 transition">Harian</button>
+                <button onclick="setRekapPeriod('weekly')" id="btnPeriodWeekly" class="flex-1 py-1.5 font-semibold rounded-lg text-slate-400 transition">Mingguan</button>
+                <button onclick="setRekapPeriod('monthly')" id="btnPeriodMonthly" class="flex-1 py-1.5 font-semibold rounded-lg text-slate-400 transition">Bulanan</button>
+            </div>
+
+            <!-- Summary Card -->
+            <div class="glass-card rounded-2xl p-4 space-y-3">
+                <h3 id="rekapTitle" class="font-bold text-sm text-slate-200 border-b border-slate-800 pb-2">Rekap Statistik</h3>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                        <span class="text-[11px] text-slate-400">Total Pendapatan Net</span>
+                        <div id="rekapTotalIncome" class="text-base font-extrabold text-emerald-400 mt-0.5">Rp 0</div>
+                    </div>
+                    <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                        <span class="text-[11px] text-slate-400">Total Pengeluaran</span>
+                        <div id="rekapTotalExpense" class="text-base font-extrabold text-rose-400 mt-0.5">Rp 0</div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/40 p-3 rounded-xl border border-slate-800 space-y-2 text-xs">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Total Trip / Orderan:</span>
+                        <span id="rekapTotalOrders" class="font-bold text-slate-100">0 Trip</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Pendapatan COD:</span>
+                        <span id="rekapCodIncome" class="font-bold text-emerald-400">Rp 0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Pendapatan NON-COD:</span>
+                        <span id="rekapNonCodIncome" class="font-bold text-indigo-400">Rp 0</span>
+                    </div>
+                    <div class="flex justify-between pt-1 border-t border-slate-800">
+                        <span class="text-slate-300 font-semibold">Keuntungan Bersih Akhir:</span>
+                        <span id="rekapNetProfit" class="font-extrabold text-amber-400">Rp 0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visual Chart -->
+            <div class="glass-card rounded-2xl p-4">
+                <h3 class="font-bold text-sm text-slate-200 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-shopee"></i> Grafik Trend Pendapatan
+                </h3>
+                <div class="relative h-56 w-full">
+                    <canvas id="rekapChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: SQL SETUP -->
+        <section id="tab-sql" class="tab-content hidden space-y-4">
+            <div class="glass-card rounded-2xl p-4 space-y-3">
+                <div class="flex items-center gap-2 text-shopee font-bold text-sm">
+                    <i class="fa-solid fa-database"></i> Setup Database Supabase
+                </div>
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    Salin query SQL di bawah ini dan jalankan di menu <b class="text-white">SQL Editor</b> pada Dashboard Supabase Anda untuk membuat tabel & hak akses RLS secara otomatis.
+                </p>
+
+                <div class="relative">
+                    <pre class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] font-mono text-slate-300 overflow-x-auto max-h-80 select-all" id="sqlCode">
+-- 1. Hapus Tabel Lama Jika Ada (Satu kali eksekusi awal)
+DROP TABLE IF EXISTS initial_balances CASCADE;
+DROP TABLE IF EXISTS transactions CASCADE;
+
+-- 2. Buat Tabel Saldo Awal Driver
+CREATE TABLE initial_balances (
+    id INT PRIMARY KEY DEFAULT 1,
+    app_balance NUMERIC DEFAULT 0,
+    cash_balance NUMERIC DEFAULT 0,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT single_row CHECK (id = 1)
+);
+
+-- 3. Buat Tabel Transaksi
+CREATE TABLE transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    type VARCHAR(20) NOT NULL, -- 'COD', 'NON', 'EXPENSE'
+    food_price NUMERIC DEFAULT 0,
+    income NUMERIC DEFAULT 0,
+    expense_amount NUMERIC DEFAULT 0,
+    source VARCHAR(20) DEFAULT 'CASH', -- 'CASH' / 'APP'
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 4. Inisialisasi Saldo Awal jika kosong
+INSERT INTO initial_balances (id, app_balance, cash_balance)
+VALUES (1, 0, 0)
+ON CONFLICT (id) DO NOTHING;
+
+-- 5. Matikan RLS untuk testing/penggunaan publik
+ALTER TABLE initial_balances DISABLE ROW LEVEL SECURITY;
+ALTER TABLE transactions DISABLE ROW LEVEL SECURITY;
+                    </pre>
+                    <button onclick="copySQL()" class="absolute top-2 right-2 bg-shopee hover:bg-shopee-hover text-white text-xs px-2.5 py-1.5 rounded-lg shadow font-medium flex items-center gap-1 transition">
+                        <i class="fa-solid fa-copy"></i>
+                        <span>Copy SQL</span>
+                    </button>
+                </div>
+
+                <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-300 flex gap-2">
+                    <i class="fa-solid fa-triangle-exclamation mt-0.5 text-amber-400"></i>
+                    <div>
+                        <b>Catatan Koneksi:</b> Setelah Anda mengeksekusi skrip SQL di atas pada Supabase, aplikasi ini akan secara otomatis terhubung dan menyinkronkan seluruh riwayat kas secara live!
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL: Tambah Orderan (COD / NON-COD) -->
+    <div id="modalOrder" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-opacity">
+        <div class="glass-card w-full max-w-md bg-slate-900 border-t sm:border border-slate-700 rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-base text-slate-100 flex items-center gap-2">
+                    <i class="fa-solid fa-motorcycle text-shopee"></i> Catat Orderan ShopeeFood
+                </h3>
+                <button onclick="closeModal('modalOrder')" class="text-slate-400 hover:text-slate-200 text-xl"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form id="formOrder" onsubmit="handleSaveOrder(event)" class="space-y-3">
+                <input type="hidden" id="orderEditId" value="">
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Tipe Pesanan</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="orderType" value="COD" checked class="peer hidden" onchange="toggleOrderFields()">
+                            <div class="p-2.5 border border-slate-700 rounded-xl text-center text-xs font-bold peer-checked:border-shopee peer-checked:bg-shopee/10 peer-checked:text-shopee text-slate-400 transition">
+                                <i class="fa-solid fa-hand-holding-dollar mb-1 text-sm block"></i> COD (Tunai)
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="orderType" value="NON" class="peer hidden" onchange="toggleOrderFields()">
+                            <div class="p-2.5 border border-slate-700 rounded-xl text-center text-xs font-bold peer-checked:border-shopee peer-checked:bg-shopee/10 peer-checked:text-shopee text-slate-400 transition">
+                                <i class="fa-solid fa-credit-card mb-1 text-sm block"></i> NON-COD (Non-Tunai)
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="fieldFoodPrice">
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Harga Makanan / Modal Resto (Rp)</label>
+                    <input type="number" id="inputFoodPrice" placeholder="0" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:border-shopee focus:outline-none">
+                    <span class="text-[10px] text-slate-400 mt-0.5 block">Mengurangi saldo app saat resto dibayar.</span>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Pendapatan Bersih / Ongkir (Rp)</label>
+                    <input type="number" id="inputIncome" required placeholder="0" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:border-shopee focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Catatan / Nama Pemesan (Opsional)</label>
+                    <input type="text" id="inputOrderNotes" placeholder="Cth: Ayam Geprek Bu Yanti" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-shopee focus:outline-none">
+                </div>
+
+                <div id="codFormulaInfo" class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-[11px] text-slate-400 space-y-1">
+                    <div class="text-shopee font-semibold mb-0.5">Simulasi Dampak Saldo:</div>
+                    <div>• <b>Saldo App:</b> <span id="simApp" class="text-amber-400">+Rp 0</span> (Pendapatan - Makanan)</div>
+                    <div>• <b>Cash Dompet:</b> <span id="simCash" class="text-emerald-400">+Rp 0</span> (Tunai Resto dari Pemesan)</div>
+                </div>
+
+                <button type="submit" class="w-full shopee-gradient hover:opacity-95 text-white font-bold py-3 rounded-xl shadow-lg shopee-glow transition">
+                    Simpan Orderan
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Tambah Pengeluaran -->
+    <div id="modalExpense" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-opacity">
+        <div class="glass-card w-full max-w-md bg-slate-900 border-t sm:border border-slate-700 rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-base text-rose-400 flex items-center gap-2">
+                    <i class="fa-solid fa-minus-circle"></i> Catat Pengeluaran Driver
+                </h3>
+                <button onclick="closeModal('modalExpense')" class="text-slate-400 hover:text-slate-200 text-xl"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form id="formExpense" onsubmit="handleSaveExpense(event)" class="space-y-3">
+                <input type="hidden" id="expenseEditId" value="">
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Nominal Pengeluaran (Rp)</label>
+                    <input type="number" id="inputExpenseAmount" required placeholder="0" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:border-rose-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Sumber Dana Potongan</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="expenseSource" value="CASH" checked class="peer hidden">
+                            <div class="p-2.5 border border-slate-700 rounded-xl text-center text-xs font-bold peer-checked:border-emerald-500 peer-checked:bg-emerald-500/10 peer-checked:text-emerald-400 text-slate-400 transition">
+                                <i class="fa-solid fa-money-bill-wave mb-1 text-sm block"></i> Cash Dompet
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="expenseSource" value="APP" class="peer hidden">
+                            <div class="p-2.5 border border-slate-700 rounded-xl text-center text-xs font-bold peer-checked:border-amber-500 peer-checked:bg-amber-500/10 peer-checked:text-amber-400 text-slate-400 transition">
+                                <i class="fa-solid fa-mobile-screen mb-1 text-sm block"></i> Saldo App
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Keterangan / Keperluan</label>
+                    <input type="text" id="inputExpenseNotes" required placeholder="Cth: Bensin Shell, Parkir, Makan" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-rose-500 focus:outline-none">
+                </div>
+
+                <button type="submit" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 rounded-xl shadow-lg transition">
+                    Simpan Pengeluaran
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Atur Saldo Awal -->
+    <div id="modalSaldoAwal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-opacity">
+        <div class="glass-card w-full max-w-md bg-slate-900 border-t sm:border border-slate-700 rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-base text-slate-100 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-shopee"></i> Atur Modal / Saldo Awal
+                </h3>
+                <button onclick="closeModal('modalSaldoAwal')" class="text-slate-400 hover:text-slate-200 text-xl"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form id="formSaldoAwal" onsubmit="handleSaveSaldoAwal(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Saldo Aplikasi Awal (Rp)</label>
+                    <input type="number" id="initAppBalance" required placeholder="0" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-amber-400 font-bold focus:border-shopee focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Cash Dompet Awal (Rp)</label>
+                    <input type="number" id="initCashBalance" required placeholder="0" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-emerald-400 font-bold focus:border-shopee focus:outline-none">
+                </div>
+
+                <p class="text-[11px] text-slate-400 leading-tight">
+                    *Mengatur ulang saldo awal akan menghitung ulang seluruh sisa saldo berjalan berdasarkan total riwayat transaksi yang tersimpan.
+                </p>
+
+                <button type="submit" class="w-full shopee-gradient text-white font-bold py-3 rounded-xl shadow-lg transition">
+                    Update Saldo Awal
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bottom Mobile Navigation Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 glass-nav border-t border-slate-800 px-4 py-2">
+        <div class="max-w-md mx-auto flex justify-around items-center">
+            <button onclick="switchTab('tab-dashboard')" id="nav-tab-dashboard" class="nav-btn flex flex-col items-center gap-1 text-shopee transition">
+                <i class="fa-solid fa-house text-lg"></i>
+                <span class="text-[10px] font-semibold">Home</span>
+            </button>
+            <button onclick="switchTab('tab-transaksi')" id="nav-tab-transaksi" class="nav-btn flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300 transition">
+                <i class="fa-solid fa-receipt text-lg"></i>
+                <span class="text-[10px] font-semibold">Riwayat</span>
+            </button>
+            <button onclick="switchTab('tab-rekap')" id="nav-tab-rekap" class="nav-btn flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300 transition">
+                <i class="fa-solid fa-chart-pie text-lg"></i>
+                <span class="text-[10px] font-semibold">Rekap</span>
+            </button>
+            <button onclick="switchTab('tab-sql')" id="nav-tab-sql" class="nav-btn flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300 transition">
+                <i class="fa-solid fa-database text-lg"></i>
+                <span class="text-[10px] font-semibold">SQL DB</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Toast Notification Container -->
+    <div id="toast" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-800 text-white border border-slate-700 px-4 py-2.5 rounded-xl shadow-2xl text-xs flex items-center gap-2 opacity-0 pointer-events-none transition-all duration-300">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+        <span id="toastMessage">Pesan Toast</span>
+    </div>
+
+    <script>
+        // Supabase Credentials
+        const SUPABASE_URL = 'https://pjysmwexaqhoewrexwmt.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqeXNtd2V4YXFob2V3cmV4d210Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3OTUzNTgsImV4cCI6MjEwNjM3MTM1OH0.dDfdLB5MUUq7FNShy_SSFtxofAvd8skaDLJbd18vCMM';
+
+        let supabaseClient = null;
+        try {
+            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch (e) {
+            console.warn("Supabase init error:", e);
+        }
+
+        // Global State
+        let state = {
+            initialApp: 0,
+            initialCash: 0,
+            transactions: [],
+            rekapPeriod: 'daily'
+        };
+
+        let chartInstance = null;
+
+        // Helper untuk mendapatkan String Tanggal Lokal (YYYY-MM-DD)
+        function getLocalDateString(dateObj = new Date()) {
+            const year = dateObj.getFullYear();
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Initializer
+        window.onload = async function() {
+            const options = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
+            document.getElementById('todayDate').innerText = new Date().toLocaleDateString('id-ID', options);
+
+            document.getElementById('inputFoodPrice').addEventListener('input', updateSimulationInfo);
+            document.getElementById('inputIncome').addEventListener('input', updateSimulationInfo);
+
+            await fetchAllData();
+        };
+
+        // --- FETCH DATA FROM SUPABASE ---
+        async function fetchAllData() {
+            let isOnline = false;
+            if (supabaseClient) {
+                try {
+                    // 1. Fetch Saldo Awal
+                    const { data: initData, error: initErr } = await supabaseClient
+                        .from('initial_balances')
+                        .select('*')
+                        .eq('id', 1)
+                        .maybeSingle();
+
+                    if (!initErr && initData) {
+                        state.initialApp = parseFloat(initData.app_balance || 0);
+                        state.initialCash = parseFloat(initData.cash_balance || 0);
+                        document.getElementById('initAppBalance').value = state.initialApp;
+                        document.getElementById('initCashBalance').value = state.initialCash;
+                    }
+
+                    // 2. Fetch Transactions
+                    const { data: txData, error: txErr } = await supabaseClient
+                        .from('transactions')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+
+                    if (!txErr) {
+                        state.transactions = txData || [];
+                        isOnline = true;
+                    }
+                } catch (err) {
+                    console.error("Gagal koneksi database:", err);
+                }
+            }
+
+            // Update Badge Status UI
+            const badge = document.getElementById('dbStatusBadge');
+            const sync = document.getElementById('badgeSync');
+            if (isOnline) {
+                badge.className = "w-3 h-3 rounded-full bg-emerald-500";
+                badge.title = "Supabase Terhubung";
+                sync.innerText = "Live Supabase";
+                sync.className = "text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium";
+            } else {
+                badge.className = "w-3 h-3 rounded-full bg-rose-500";
+                badge.title = "Koneksi Terputus";
+                sync.innerText = "Offline Mode";
+                sync.className = "text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-full font-medium";
+            }
+
+            recalculateBalances();
+            renderTransactions();
+            renderRekap();
+        }
+
+        // --- RECALCULATE BALANCES ---
+        function recalculateBalances() {
+            let currentApp = state.initialApp;
+            let currentCash = state.initialCash;
+
+            const todayStr = getLocalDateString(new Date());
+            let todayOrders = 0;
+            let todayInc = 0;
+            let todayExp = 0;
+            let todayCod = 0;
+            let todayNonCod = 0;
+
+            state.transactions.forEach(tx => {
+                const food = parseFloat(tx.food_price || 0);
+                const inc = parseFloat(tx.income || 0);
+                const exp = parseFloat(tx.expense_amount || 0);
+
+                if (tx.type === 'COD') {
+                    currentApp += (inc - food);
+                    currentCash += food;
+                } else if (tx.type === 'NON') {
+                    currentApp += inc;
+                } else if (tx.type === 'EXPENSE') {
+                    if (tx.source === 'APP') {
+                        currentApp -= exp;
+                    } else {
+                        currentCash -= exp;
+                    }
+                }
+
+                // Calc Today Stats
+                const txDateStr = getLocalDateString(new Date(tx.created_at));
+                if (txDateStr === todayStr) {
+                    if (tx.type === 'COD') {
+                        todayOrders++;
+                        todayCod++;
+                        todayInc += inc;
+                    } else if (tx.type === 'NON') {
+                        todayOrders++;
+                        todayNonCod++;
+                        todayInc += inc;
+                    } else if (tx.type === 'EXPENSE') {
+                        todayExp += exp;
+                    }
+                }
+            });
+
+            const totalAssets = currentApp + currentCash;
+
+            document.getElementById('totalAssets').innerText = formatRupiah(totalAssets);
+            document.getElementById('saldoApp').innerText = formatRupiah(currentApp);
+            document.getElementById('cashDompet').innerText = formatRupiah(currentCash);
+
+            document.getElementById('todayOrderCount').innerText = todayOrders;
+            document.getElementById('todayIncome').innerText = formatRupiah(todayInc);
+            document.getElementById('todayExpense').innerText = formatRupiah(todayExp);
+            document.getElementById('todayCodCount').innerText = todayCod;
+            document.getElementById('todayNonCodCount').innerText = todayNonCod;
+        }
+
+        // --- RENDER TRANSACTIONS ---
+        function renderTransactions() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const filter = document.getElementById('filterType').value;
+
+            const filtered = state.transactions.filter(tx => {
+                const matchType = (filter === 'ALL') || (tx.type === filter);
+                const matchSearch = (tx.notes || '').toLowerCase().includes(search);
+                return matchType && matchSearch;
+            });
+
+            // Mini Recent List
+            const recentEl = document.getElementById('recentTransactionList');
+            const recentData = state.transactions.slice(0, 3);
+            if (recentData.length === 0) {
+                recentEl.innerHTML = `<div class="text-center py-4 text-slate-500 text-xs">Belum ada transaksi tersimpan.</div>`;
+            } else {
+                recentEl.innerHTML = recentData.map(tx => buildTxCardHtml(tx, false)).join('');
+            }
+
+            // Full List
+            const fullEl = document.getElementById('fullTransactionList');
+            if (filtered.length === 0) {
+                fullEl.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">Tidak ada riwayat transaksi ditemukan.</div>`;
+            } else {
+                fullEl.innerHTML = filtered.map(tx => buildTxCardHtml(tx, true)).join('');
+            }
+        }
+
+        function buildTxCardHtml(tx, showActions) {
+            const timeStr = new Date(tx.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            const dateStr = new Date(tx.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+
+            let typeBadge = '';
+            let detailText = '';
+            let amountText = '';
+
+            if (tx.type === 'COD') {
+                typeBadge = `<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-bold">COD (Tunai)</span>`;
+                detailText = `Modal Resto: ${formatRupiah(tx.food_price)} | Ongkir: ${formatRupiah(tx.income)}`;
+                amountText = `<span class="text-emerald-400 font-extrabold">+${formatRupiah(tx.income)}</span>`;
+            } else if (tx.type === 'NON') {
+                typeBadge = `<span class="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded text-[10px] font-bold">NON-COD</span>`;
+                detailText = `Ongkir Masuk Saldo App`;
+                amountText = `<span class="text-indigo-400 font-extrabold">+${formatRupiah(tx.income)}</span>`;
+            } else {
+                typeBadge = `<span class="bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded text-[10px] font-bold">Pengeluaran</span>`;
+                detailText = `Potong dari ${tx.source === 'APP' ? 'Saldo App' : 'Cash Dompet'}`;
+                amountText = `<span class="text-rose-400 font-extrabold">-${formatRupiah(tx.expense_amount)}</span>`;
+            }
+
+            return `
+                <div class="glass-card rounded-xl p-3 flex items-center justify-between gap-2 border border-slate-800">
+                    <div class="space-y-1 flex-1">
+                        <div class="flex items-center gap-2">
+                            ${typeBadge}
+                            <span class="text-[10px] text-slate-400">${dateStr}, ${timeStr}</span>
+                        </div>
+                        <div class="text-xs font-bold text-slate-100">${escapeHtml(tx.notes || 'Tanpa Catatan')}</div>
+                        <div class="text-[11px] text-slate-400">${detailText}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs mb-1">${amountText}</div>
+                        ${showActions ? `
+                            <button onclick="deleteTx('${tx.id}')" class="text-slate-500 hover:text-rose-400 text-xs px-1.5 py-0.5 rounded transition">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- SAVE ORDER (COD/NON) ---
+        async function handleSaveOrder(e) {
+            e.preventDefault();
+            const type = document.querySelector('input[name="orderType"]:checked').value;
+            const foodPrice = parseFloat(document.getElementById('inputFoodPrice').value) || 0;
+            const income = parseFloat(document.getElementById('inputIncome').value) || 0;
+            const notes = document.getElementById('inputOrderNotes').value || '';
+
+            const payload = {
+                type: type,
+                food_price: type === 'COD' ? foodPrice : 0,
+                income: income,
+                expense_amount: 0,
+                source: 'CASH',
+                notes: notes,
+                created_at: new Date().toISOString()
+            };
+
+            if (supabaseClient) {
+                const { error } = await supabaseClient.from('transactions').insert([payload]);
+                if (error) {
+                    showToast("Gagal menyimpan: " + error.message, true);
+                    return;
+                }
+            }
+
+            closeModal('modalOrder');
+            document.getElementById('formOrder').reset();
+            showToast("Orderan berhasil dicatat!");
+            await fetchAllData();
+        }
+
+        // --- SAVE EXPENSE ---
+        async function handleSaveExpense(e) {
+            e.preventDefault();
+            const amount = parseFloat(document.getElementById('inputExpenseAmount').value) || 0;
+            const source = document.querySelector('input[name="expenseSource"]:checked').value;
+            const notes = document.getElementById('inputExpenseNotes').value || '';
+
+            const payload = {
+                type: 'EXPENSE',
+                food_price: 0,
+                income: 0,
+                expense_amount: amount,
+                source: source,
+                notes: notes,
+                created_at: new Date().toISOString()
+            };
+
+            if (supabaseClient) {
+                const { error } = await supabaseClient.from('transactions').insert([payload]);
+                if (error) {
+                    showToast("Gagal menyimpan pengeluaran: " + error.message, true);
+                    return;
+                }
+            }
+
+            closeModal('modalExpense');
+            document.getElementById('formExpense').reset();
+            showToast("Pengeluaran dicatat!");
+            await fetchAllData();
+        }
+
+        // --- SAVE SALDO AWAL ---
+        async function handleSaveSaldoAwal(e) {
+            e.preventDefault();
+            const app = parseFloat(document.getElementById('initAppBalance').value) || 0;
+            const cash = parseFloat(document.getElementById('initCashBalance').value) || 0;
+
+            if (supabaseClient) {
+                const { error } = await supabaseClient.from('initial_balances').upsert({
+                    id: 1,
+                    app_balance: app,
+                    cash_balance: cash,
+                    updated_at: new Date().toISOString()
+                });
+                if (error) {
+                    showToast("Gagal update saldo awal: " + error.message, true);
+                    return;
+                }
+            }
+
+            state.initialApp = app;
+            state.initialCash = cash;
+            closeModal('modalSaldoAwal');
+            showToast("Saldo awal diperbarui!");
+            await fetchAllData();
+        }
+
+        // --- DELETE TRANSACTION ---
+        async function deleteTx(id) {
+            if (!confirm("Hapus transaksi ini dari database?")) return;
+
+            if (supabaseClient) {
+                const { error } = await supabaseClient.from('transactions').delete().eq('id', id);
+                if (error) {
+                    showToast("Gagal menghapus: " + error.message, true);
+                    return;
+                }
+            }
+            showToast("Transaksi berhasil dihapus");
+            await fetchAllData();
+        }
+
+        // --- REKAP & CHART LOGIC ---
+        function setRekapPeriod(period) {
+            state.rekapPeriod = period;
+            ['Daily', 'Weekly', 'Monthly'].forEach(p => {
+                const btn = document.getElementById('btnPeriod' + p);
+                if (p.toLowerCase() === period) {
+                    btn.className = "flex-1 py-1.5 font-bold rounded-lg bg-shopee text-white shadow transition";
+                } else {
+                    btn.className = "flex-1 py-1.5 font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition";
+                }
+            });
+            renderRekap();
+        }
+
+        function renderRekap() {
+            const now = new Date();
+            let startDate = new Date();
+
+            if (state.rekapPeriod === 'daily') {
+                startDate.setHours(0,0,0,0);
+                document.getElementById('rekapTitle').innerText = "Rekap Statistik (Hari Ini)";
+            } else if (state.rekapPeriod === 'weekly') {
+                startDate.setDate(now.getDate() - 7);
+                document.getElementById('rekapTitle').innerText = "Rekap Statistik (7 Hari Terakhir)";
+            } else {
+                startDate.setDate(now.getDate() - 30);
+                document.getElementById('rekapTitle').innerText = "Rekap Statistik (30 Hari Terakhir)";
+            }
+
+            let totalIncome = 0;
+            let totalExpense = 0;
+            let totalOrders = 0;
+            let codIncome = 0;
+            let nonCodIncome = 0;
+
+            const chartMap = {};
+
+            state.transactions.forEach(tx => {
+                const txDate = new Date(tx.created_at);
+                if (txDate >= startDate) {
+                    const dateKey = txDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+                    if (!chartMap[dateKey]) chartMap[dateKey] = 0;
+
+                    const inc = parseFloat(tx.income || 0);
+                    const exp = parseFloat(tx.expense_amount || 0);
+
+                    if (tx.type === 'COD') {
+                        totalOrders++;
+                        codIncome += inc;
+                        totalIncome += inc;
+                        chartMap[dateKey] += inc;
+                    } else if (tx.type === 'NON') {
+                        totalOrders++;
+                        nonCodIncome += inc;
+                        totalIncome += inc;
+                        chartMap[dateKey] += inc;
+                    } else if (tx.type === 'EXPENSE') {
+                        totalExpense += exp;
+                    }
+                }
+            });
+
+            document.getElementById('rekapTotalIncome').innerText = formatRupiah(totalIncome);
+            document.getElementById('rekapTotalExpense').innerText = formatRupiah(totalExpense);
+            document.getElementById('rekapTotalOrders').innerText = totalOrders + " Trip";
+            document.getElementById('rekapCodIncome').innerText = formatRupiah(codIncome);
+            document.getElementById('rekapNonCodIncome').innerText = formatRupiah(nonCodIncome);
+            document.getElementById('rekapNetProfit').innerText = formatRupiah(totalIncome - totalExpense);
+
+            renderChart(Object.keys(chartMap), Object.values(chartMap));
+        }
+
+        function renderChart(labels, data) {
+            const ctx = document.getElementById('rekapChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels.length ? labels : ['Hari ini'],
+                    datasets: [{
+                        label: 'Pendapatan (Rp)',
+                        data: data.length ? data : [0],
+                        borderColor: '#EE4D2D',
+                        backgroundColor: 'rgba(238, 77, 45, 0.15)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#EE4D2D'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        // --- FORM TOGGLES & UTILS ---
+        function toggleOrderFields() {
+            const type = document.querySelector('input[name="orderType"]:checked').value;
+            const foodField = document.getElementById('fieldFoodPrice');
+            if (type === 'COD') {
+                foodField.classList.remove('hidden');
+            } else {
+                foodField.classList.add('hidden');
+            }
+            updateSimulationInfo();
+        }
+
+        function updateSimulationInfo() {
+            const type = document.querySelector('input[name="orderType"]:checked').value;
+            const food = parseFloat(document.getElementById('inputFoodPrice').value) || 0;
+            const inc = parseFloat(document.getElementById('inputIncome').value) || 0;
+
+            const simApp = document.getElementById('simApp');
+            const simCash = document.getElementById('simCash');
+
+            if (type === 'COD') {
+                const impactApp = inc - food;
+                simApp.innerText = `${impactApp >= 0 ? '+' : ''}${formatRupiah(impactApp)}`;
+                simApp.className = impactApp >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold';
+
+                simCash.innerText = `+${formatRupiah(food)}`;
+                simCash.className = 'text-emerald-400 font-bold';
+            } else {
+                simApp.innerText = `+${formatRupiah(inc)}`;
+                simApp.className = 'text-emerald-400 font-bold';
+
+                simCash.innerText = `Rp 0`;
+                simCash.className = 'text-slate-400 font-bold';
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = "nav-btn flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300 transition";
+            });
+            document.getElementById('nav-' + tabId).className = "nav-btn flex flex-col items-center gap-1 text-shopee transition";
+
+            if (tabId === 'tab-rekap') {
+                setRekapPeriod(state.rekapPeriod);
+            }
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+            if (id === 'modalOrder') toggleOrderFields();
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function copySQL() {
+            const sqlText = document.getElementById('sqlCode').innerText;
+            navigator.clipboard.writeText(sqlText);
+            showToast("Skrip SQL berhasil disalin!");
+        }
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            document.getElementById('toastMessage').innerText = msg;
+
+            if (isError) {
+                icon.className = "fa-solid fa-circle-xmark text-rose-400 text-sm";
+            } else {
+                icon.className = "fa-solid fa-circle-check text-emerald-400 text-sm";
+            }
+
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+
+        function formatRupiah(val) {
+            return 'Rp ' + Math.round(val).toLocaleString('id-ID');
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+    </script>
+</body>
+</html>
